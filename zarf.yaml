@@ -1,0 +1,100 @@
+kind: ZarfPackageConfig
+metadata:
+  name: kafka-pg-pipeline
+  version: 0.1.0
+  description: "Air-gapped Pipeline: Kafka -> Kafka Connect (JDBC Sink) -> PostgreSQL"
+  architecture: arm64
+
+# will be injected at Deploy (Prompt or ZARF_VAR_DB_PASSWORD)
+variables:
+  - name: DB_PASSWORD
+    description: "PostgreSQL-Passwort for User 'sink'"
+    sensitive: true
+    prompt: true
+
+components:
+  - name: postgres
+    required: true
+    charts:
+      - name: postgresql
+        releaseName: postgresql    
+        localPath: charts/postgresql-18.7.3.tgz
+        version: "18.7.3"             
+        namespace: db
+        valuesFiles:
+          - values/postgres-values.yaml
+    images:
+      - registry-1.docker.io/bitnamilegacy/postgresql:17.5.0-debian-12-r3
+    actions:
+      onDeploy:
+        after:
+          - description: "Wait until PostgreSQL is ready"
+            wait:
+              cluster:
+                kind: Pod
+                name: "app.kubernetes.io/name=postgresql"
+                namespace: db
+                condition: Ready
+
+  - name: kafka
+    required: true
+    charts:
+      - name: kafka
+        releaseName: kafka            
+        localPath: charts/kafka-32.4.3.tgz
+        version: "32.4.3"              
+        namespace: kafka
+        valuesFiles:
+          - values/kafka-values.yaml
+    images:
+      - docker.io/bitnamilegacy/kafka:4.0.0-debian-12-r10
+    actions:
+      onDeploy:
+        after:
+          - description: "Wait until Kafka is ready"
+            wait:
+              cluster:
+                kind: Pod
+                name: "app.kubernetes.io/name=kafka"
+                namespace: kafka
+                condition: Ready
+
+  - name: kafka-connect
+    required: true
+    manifests:
+      - name: connect
+        namespace: kafka
+        files:
+          - manifests/connect.yaml
+    images:
+      - ghcr.io/hassata/kafka-connect-jdbc:1.0.0
+    actions:
+      onDeploy:
+        after:
+          - description: "Wait for the Connect-Pod to be ready"
+            wait:
+              cluster:
+                kind: Pod
+                name: "app=kafka-connect"
+                namespace: kafka
+                condition: Ready
+
+  - name: register-connector
+    required: true
+    manifests:
+      - name: connector
+        namespace: kafka
+        files:
+          - manifests/register-connector.yaml
+    images:
+      - docker.io/curlimages/curl:8.7.1
+    actions:
+      onDeploy:
+        after:
+          - description: "Wait for the registration job to complete"
+            wait:
+              cluster:
+                kind: Job
+                name: register-connector
+                namespace: kafka
+                condition: Complete
