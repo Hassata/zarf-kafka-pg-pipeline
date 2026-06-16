@@ -1,0 +1,7 @@
+image:
+  repository: bitnamilegacy/postgresql
+  tag: 17.5.0-debian-12-r3
+auth:
+  username: sink
+  password: "###ZARF_VAR_DB_PASSWORD###"
+  database: messages
