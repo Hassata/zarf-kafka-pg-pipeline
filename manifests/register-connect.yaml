@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: connector-config
+  namespace: kafka
+data:
+  pg-sink.json: |
+    {
+      "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+      "tasks.max": "1",
+      "topics": "messages",
+      "connection.url": "jdbc:postgresql://postgresql.db.svc.cluster.local:5432/messages",
+      "connection.user": "sink",
+      "connection.password": "###ZARF_VAR_DB_PASSWORD###",
+      "auto.create": "true",
+      "auto.evolve": "true",
+      "insert.mode": "upsert",
+      "pk.mode": "record_value",
+      "pk.fields": "id",
+      "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+      "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+      "value.converter.schemas.enable": "true"
+    }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: register-connector
+  namespace: kafka
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      volumes:
+        - name: cfg
+          configMap:
+            name: connector-config
+      containers:
+        - name: register
+          image: curlimages/curl:8.7.1
+          volumeMounts:
+            - name: cfg
+              mountPath: /cfg
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "Wait for Connect worker to initiate...";
+              until curl -sf http://kafka-connect:8083/connector-plugins >/dev/null; do
+                sleep 3;
+              done
+              
+              echo "Register pg-sink connector...";
+              curl -sf -X PUT \
+                -H "Content-Type: application/json" \
+                --data @/cfg/pg-sink.json \
+                http://kafka-connect:8083/connectors/pg-sink/config
+ 
+              echo "Wait until the connector is running...";
+              for i in $(seq 1 30); do
+                STATE=$(curl -s http://kafka-connect:8083/connectors/pg-sink/status \
+                        | tr ',' '\n' | grep -m1 '"state"' || true);
+                echo "$STATE" | grep -q 'RUNNING' && { echo "Connector RUNNING."; exit 0; }
+                echo "$STATE" | grep -q 'FAILED'  && { echo "Connector FAILED."; exit 1; }
+                sleep 2;
+              done
+              echo "Connector did not reach RUNNING (timeout).";
+              exit 1
