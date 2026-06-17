@@ -50,13 +50,13 @@ spec:
               until curl -sf http://kafka-connect:8083/connector-plugins >/dev/null; do
                 sleep 3;
               done
-              
+
               echo "Register pg-sink connector...";
               curl -sf -X PUT \
                 -H "Content-Type: application/json" \
                 --data @/cfg/pg-sink.json \
                 http://kafka-connect:8083/connectors/pg-sink/config
- 
+
               echo "Wait until the connector is running...";
               for i in $(seq 1 30); do
                 STATE=$(curl -s http://kafka-connect:8083/connectors/pg-sink/status \

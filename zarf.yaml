@@ -16,9 +16,9 @@ components:
     required: true
     charts:
       - name: postgresql
-        releaseName: postgresql    
+        releaseName: postgresql
         localPath: charts/postgresql-18.7.3.tgz
-        version: "18.7.3"             
+        version: "18.7.3"
         namespace: db
         valuesFiles:
           - values/postgres-values.yaml
@@ -39,9 +39,9 @@ components:
     required: true
     charts:
       - name: kafka
-        releaseName: kafka            
+        releaseName: kafka
         localPath: charts/kafka-32.4.3.tgz
-        version: "32.4.3"              
+        version: "32.4.3"
         namespace: kafka
         valuesFiles:
           - values/kafka-values.yaml

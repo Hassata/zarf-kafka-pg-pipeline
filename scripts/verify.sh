@@ -28,7 +28,7 @@ echo "▶ Polling PostgreSQL for delivery..."
 for _ in $(seq 1 30); do
   ROW=$(kubectl exec -n "$DB_NS" "$PG_POD" -- env PGPASSWORD="$PG_PASSWORD" \
     psql -U "$DB_USER" -d "$DB" -tAc "SELECT content FROM ${TOPIC} WHERE id=${ID};" 2>/dev/null || true)
-  
+
   if [ "$ROW" = "$CONTENT" ]; then
     echo "✅ E2E Success"
     echo "Message: $CONTENT"
