@@ -73,10 +73,10 @@ components:
           - description: "Wait for the Connect-Pod to be ready"
             wait:
               cluster:
-                kind: Pod
-                name: "app=kafka-connect"
+                kind: Deployment
+                name: kafka-connect
                 namespace: kafka
-                condition: Ready
+                condition: Available
 
   - name: register-connector
     required: true
