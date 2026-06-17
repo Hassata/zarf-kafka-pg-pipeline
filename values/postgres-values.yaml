@@ -5,3 +5,7 @@ auth:
   username: sink
   password: "###ZARF_VAR_DB_PASSWORD###"
   database: messages
+primary:
+  persistence:
+    enabled: true
+    size: 1Gi

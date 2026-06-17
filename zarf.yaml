@@ -3,7 +3,6 @@ metadata:
   name: kafka-pg-pipeline
   version: 0.1.0
   description: "Air-gapped Pipeline: Kafka -> Kafka Connect (JDBC Sink) -> PostgreSQL"
-  architecture: arm64
 
 # will be injected at Deploy (Prompt or ZARF_VAR_DB_PASSWORD)
 variables:
